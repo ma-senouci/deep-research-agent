@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock
 from agents import Runner
-from logic_agents.clarifier import run_clarifier
+from logic_agents import run_clarifier
 from models.schemas import ClarificationResult
 
 
