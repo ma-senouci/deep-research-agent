@@ -2,7 +2,7 @@ import asyncio
 import pytest
 from unittest.mock import AsyncMock
 from agents import Runner
-from logic_agents import scout_agent, run_scout
+from logic_agents import scout_agent, run_scout, run_scouts
 from models.schemas import SearchSummary
 
 
@@ -53,3 +53,75 @@ async def test_run_scout_concurrent_execution(monkeypatch):
     results = await asyncio.gather(*[run_scout(q) for q in queries])
 
     assert all(r.success is True for r in results)
+
+
+@pytest.mark.asyncio
+async def test_run_scouts_collects_partial_results(monkeypatch):
+    async def mock_run(agent, query):
+        if query == "q2":
+            raise Exception("Search failed")
+        mock_result = AsyncMock()
+        mock_result.final_output = SEARCH_SUMMARY
+        return mock_result
+
+    monkeypatch.setattr(Runner, "run", mock_run)
+
+    results = await run_scouts(["q1", "q2", "q3"])
+
+    assert len(results) == 3
+    assert results[0].success is True
+    assert results[1].success is False
+    assert results[2].success is True
+
+
+@pytest.mark.asyncio
+async def test_run_scouts_reports_progress(monkeypatch):
+    _mock_scout(monkeypatch, SEARCH_SUMMARY)
+    reports = []
+
+    results = await run_scouts(["q1", "q2", "q3"], status_callback=reports.append)
+
+    assert len(reports) == 3
+    assert reports[0] == "1/3 searches complete"
+    assert reports[1] == "2/3 searches complete"
+    assert reports[2] == "3/3 searches complete"
+
+
+@pytest.mark.asyncio
+async def test_run_scouts_no_callback(monkeypatch):
+    _mock_scout(monkeypatch, SEARCH_SUMMARY)
+    results = await run_scouts(["q1", "q2"])
+    assert all(r.success is True for r in results)
+
+
+@pytest.mark.asyncio
+async def test_run_scouts_all_success(monkeypatch):
+    _mock_scout(monkeypatch, SEARCH_SUMMARY)
+    results = await run_scouts(["q1", "q2", "q3"])
+    assert len(results) == 3
+    assert all(r.success is True for r in results)
+
+
+@pytest.mark.asyncio
+async def test_run_scouts_empty_queries(monkeypatch):
+    _mock_scout(monkeypatch, SEARCH_SUMMARY)
+    results = await run_scouts([])
+    assert results == []
+
+
+@pytest.mark.asyncio
+async def test_run_scouts_preserves_result_order(monkeypatch):
+    async def mock_run(agent, query):
+        mock_result = AsyncMock()
+        mock_result.final_output = SearchSummary(
+            query=query, summary=f"Summary for {query}", sources=[]
+        )
+        return mock_result
+
+    monkeypatch.setattr(Runner, "run", mock_run)
+
+    queries = ["alpha", "beta", "gamma"]
+    results = await run_scouts(queries)
+
+    for i, q in enumerate(queries):
+        assert results[i].data.query == q

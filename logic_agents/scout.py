@@ -1,3 +1,5 @@
+import asyncio
+from collections.abc import Callable
 from agents import Agent, ModelSettings, Runner, WebSearchTool
 from models.schemas import AgentResult, SearchSummary
 
@@ -15,9 +17,22 @@ If no sources are found, return an empty sources list.""",
     output_type=SearchSummary,
 )
 
+
 async def run_scout(query: str) -> AgentResult[SearchSummary]:
     try:
         result = await Runner.run(scout_agent, query)
         return AgentResult(success=True, data=result.final_output)
     except Exception as e:
         return AgentResult(success=False, error=str(e))
+
+
+async def run_scouts(
+    queries: list[str],
+    status_callback: Callable[[str], None] | None = None,
+) -> list[AgentResult[SearchSummary]]:
+    total = len(queries)
+    results = await asyncio.gather(*[run_scout(q) for q in queries])
+    for i, result in enumerate(results):
+        if status_callback:
+            status_callback(f"{i + 1}/{total} searches complete")
+    return results
