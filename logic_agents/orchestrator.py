@@ -43,6 +43,16 @@ async def run_pipeline(
             _update(f"Searching ({len(queries)} queries)...")
             scout_results = await run_scouts(queries, status_callback=status_callback)
             summaries = [r.data for r in scout_results if r.success and r.data]
+            if not summaries:
+                _update("❌ All searches failed")
+                return AgentResult(
+                    success=False,
+                    error="No search results available — please try rephrasing your query.",
+                    trace_url=trace_url,
+                )
+            failed = len(scout_results) - len(summaries)
+            if failed:
+                _update(f"⚠️ {failed}/{len(scout_results)} searches failed, continuing with {len(summaries)} results")
 
             _update("Synthesizing...")
             analyst_result = await run_analyst(summaries)
@@ -53,8 +63,11 @@ async def run_pipeline(
                 )
 
             report = analyst_result.data
-            _update("Sending...")
-            await run_delivery(report, recipient_email)
+            if recipient_email:
+                _update("Sending...")
+                delivery_result = await run_delivery(report, recipient_email)
+                if not delivery_result.success:
+                    _update(f"⚠️ Email delivery failed: {delivery_result.error}")
 
             return AgentResult(success=True, data=report, trace_url=trace_url)
     except Exception as e:

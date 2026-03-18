@@ -93,7 +93,7 @@ async def test_handle_research_trace_url(monkeypatch):
 async def test_handle_research_pipeline_exception(monkeypatch):
     import app as app_mod
 
-    async def exploding_pipeline(**kwargs):
+    async def exploding_pipeline(query, answers, recipient_email=None, status_callback=None):
         raise RuntimeError("Unexpected boom")
 
     monkeypatch.setattr(app_mod, "run_pipeline", exploding_pipeline)
@@ -101,3 +101,49 @@ async def test_handle_research_pipeline_exception(monkeypatch):
     final_status = results[-1][0]
     assert "Pipeline error" in final_status
     assert "boom" in final_status.lower()
+
+
+@pytest.mark.asyncio
+async def test_sanitize_error_strips_exception_class(monkeypatch):
+    import app as app_mod
+
+    raw_error = AgentResult(
+        success=False, error="RuntimeError: something broke",
+        trace_url="https://platform.openai.com/traces/err-id",
+    )
+    monkeypatch.setattr(app_mod, "run_pipeline", AsyncMock(return_value=raw_error))
+    results = await _collect(app_mod.handle_research("AI query", "", "", ""))
+    final_status = results[-1][0]
+    assert "RuntimeError" not in final_status
+    assert "something broke" in final_status
+
+
+@pytest.mark.asyncio
+async def test_sanitize_error_preserves_clean_messages(monkeypatch):
+    import app as app_mod
+
+    clean_error = AgentResult(
+        success=False, error="No search results available",
+        trace_url="https://platform.openai.com/traces/err-id",
+    )
+    monkeypatch.setattr(app_mod, "run_pipeline", AsyncMock(return_value=clean_error))
+    results = await _collect(app_mod.handle_research("AI query", "", "", ""))
+    final_status = results[-1][0]
+    assert "No search results available" in final_status
+
+
+def test_sanitize_error_strips_file_paths():
+    from app import _sanitize_error
+    result = _sanitize_error('File "/path/to/file.py", line 42, in func\nValueError: bad')
+    assert "/path/to/" not in result
+
+
+def test_sanitize_error_strips_traceback():
+    from app import _sanitize_error
+    result = _sanitize_error('Traceback (most recent call last):\n  File "test.py", line 1\nError: fail')
+    assert "Traceback" not in result
+
+
+def test_sanitize_error_fallback_on_empty():
+    from app import _sanitize_error
+    assert _sanitize_error("") == "An unexpected error occurred."

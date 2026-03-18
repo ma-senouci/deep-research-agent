@@ -1,10 +1,18 @@
 import os
+import re
 import asyncio
 import gradio as gr
 from dotenv import load_dotenv
 from logic_agents import run_pipeline
 
 load_dotenv(override=True)
+
+
+def _sanitize_error(msg: str) -> str:
+    msg = re.sub(r"^\w+(\.\w+)*Error:\s*", "", msg)
+    msg = re.sub(r'File ".+?", line \d+.*', "", msg)
+    msg = re.sub(r"Traceback.*", "", msg, flags=re.DOTALL)
+    return msg.strip()[:200] or "An unexpected error occurred."
 
 
 async def handle_research(query, email, openai_key, resend_key):
@@ -37,13 +45,13 @@ async def handle_research(query, email, openai_key, resend_key):
     try:
         result = task.result()
     except Exception as exc:
-        statuses.append(f"❌ Pipeline error: {exc}")
+        statuses.append(f"❌ Pipeline error: {_sanitize_error(str(exc))}")
         yield "\n".join(statuses), "", ""
         return
 
     trace_link = f"[View Trace]({result.trace_url})" if result.trace_url else ""
     if not result.success:
-        statuses.append(f"❌ Pipeline failed: {result.error}")
+        statuses.append(f"❌ Pipeline failed: {_sanitize_error(result.error)}")
         yield "\n".join(statuses), "", trace_link
         return
 

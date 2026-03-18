@@ -61,15 +61,16 @@ async def test_run_pipeline_strategist_failure(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_run_pipeline_all_scouts_fail_propagates_analyst_error(monkeypatch):
+async def test_run_pipeline_all_scouts_fail_returns_clean_error(monkeypatch):
     _patch_all(monkeypatch)
     empty_scouts = [AgentResult(success=False, error="Search error")]
     monkeypatch.setattr(orchestrator_mod, "run_scouts", AsyncMock(return_value=empty_scouts))
-    analyst_fail = AgentResult(success=False, error="No search summaries provided")
-    monkeypatch.setattr(orchestrator_mod, "run_analyst", AsyncMock(return_value=analyst_fail))
+    analyst_mock = AsyncMock()
+    monkeypatch.setattr(orchestrator_mod, "run_analyst", analyst_mock)
     result = await run_pipeline("AI query", ["answers"])
     assert result.success is False
-    assert "Analyst" in result.error
+    assert "No search results available" in result.error
+    analyst_mock.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -85,16 +86,51 @@ async def test_run_pipeline_analyst_failure(monkeypatch):
 @pytest.mark.asyncio
 async def test_run_pipeline_delivery_failure_does_not_fail_pipeline(monkeypatch):
     _patch_all(monkeypatch, delivery_result=DELIVERY_FAIL)
+    result = await run_pipeline("AI query", ["answers"], "test@example.com")
+    assert result.success is True
+    assert result.data is not None
+
+
+@pytest.mark.asyncio
+async def test_run_pipeline_partial_scout_failure_continues(monkeypatch):
+    _patch_all(monkeypatch)
+    partial_scouts = [
+        AgentResult(success=False, error="Search error"),
+        AgentResult(success=False, error="Timeout"),
+        SCOUT_RESULTS[0],
+    ]
+    monkeypatch.setattr(orchestrator_mod, "run_scouts", AsyncMock(return_value=partial_scouts))
     result = await run_pipeline("AI query", ["answers"])
     assert result.success is True
     assert result.data is not None
 
 
 @pytest.mark.asyncio
+async def test_run_pipeline_partial_scout_status_messages(monkeypatch):
+    _patch_all(monkeypatch)
+    partial_scouts = [
+        AgentResult(success=False, error="err"),
+        SCOUT_RESULTS[0],
+    ]
+    monkeypatch.setattr(orchestrator_mod, "run_scouts", AsyncMock(return_value=partial_scouts))
+    statuses = []
+    await run_pipeline("AI query", ["answers"], status_callback=lambda s: statuses.append(s))
+    assert any("1/2 searches failed" in s for s in statuses)
+
+
+@pytest.mark.asyncio
+async def test_run_pipeline_delivery_failure_status_message(monkeypatch):
+    _patch_all(monkeypatch, delivery_result=DELIVERY_FAIL)
+    statuses = []
+    await run_pipeline("AI query", ["answers"], "a@b.com", status_callback=lambda s: statuses.append(s))
+    assert any("Email delivery failed" in s for s in statuses)
+
+
+@pytest.mark.asyncio
 async def test_run_pipeline_calls_status_callback(monkeypatch):
     _patch_all(monkeypatch)
     statuses = []
-    await run_pipeline("AI query", ["answers"], status_callback=lambda s: statuses.append(s))
+    await run_pipeline("AI query", ["answers"], "test@example.com", status_callback=lambda s: statuses.append(s))
     assert any("Plan" in s for s in statuses)
     assert any("Search" in s for s in statuses)
     assert any("Synth" in s for s in statuses)
