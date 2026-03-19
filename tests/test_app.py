@@ -40,6 +40,7 @@ async def test_handle_research_streams_status(monkeypatch):
         return REPORT
 
     monkeypatch.setattr(app_mod, "run_pipeline", mock_pipeline)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     results = await _collect(app_mod.handle_research("AI query", "", "", ""))
     statuses = [r[0] for r in results]
     assert any("Planning" in s for s in statuses)
@@ -52,6 +53,7 @@ async def test_handle_research_failure(monkeypatch):
     import app as app_mod
 
     monkeypatch.setattr(app_mod, "run_pipeline", AsyncMock(return_value=FAILURE))
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     results = await _collect(app_mod.handle_research("AI query", "", "", ""))
     final_status = results[-1][0]
     assert "failed" in final_status.lower()
@@ -83,6 +85,7 @@ async def test_handle_research_trace_url(monkeypatch):
     import app as app_mod
 
     monkeypatch.setattr(app_mod, "run_pipeline", AsyncMock(return_value=REPORT))
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     results = await _collect(app_mod.handle_research("AI query", "", "", ""))
     trace_md = results[-1][2]
     assert "View Trace" in trace_md
@@ -97,6 +100,7 @@ async def test_handle_research_pipeline_exception(monkeypatch):
         raise RuntimeError("Unexpected boom")
 
     monkeypatch.setattr(app_mod, "run_pipeline", exploding_pipeline)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     results = await _collect(app_mod.handle_research("AI query", "", "", ""))
     final_status = results[-1][0]
     assert "Pipeline error" in final_status
@@ -112,6 +116,7 @@ async def test_sanitize_error_strips_exception_class(monkeypatch):
         trace_url="https://platform.openai.com/traces/err-id",
     )
     monkeypatch.setattr(app_mod, "run_pipeline", AsyncMock(return_value=raw_error))
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     results = await _collect(app_mod.handle_research("AI query", "", "", ""))
     final_status = results[-1][0]
     assert "RuntimeError" not in final_status
@@ -127,6 +132,7 @@ async def test_sanitize_error_preserves_clean_messages(monkeypatch):
         trace_url="https://platform.openai.com/traces/err-id",
     )
     monkeypatch.setattr(app_mod, "run_pipeline", AsyncMock(return_value=clean_error))
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     results = await _collect(app_mod.handle_research("AI query", "", "", ""))
     final_status = results[-1][0]
     assert "No search results available" in final_status
@@ -147,3 +153,25 @@ def test_sanitize_error_strips_traceback():
 def test_sanitize_error_fallback_on_empty():
     from app import _sanitize_error
     assert _sanitize_error("") == "An unexpected error occurred."
+
+
+@pytest.mark.parametrize("raw", [
+    "openai.RateLimitError: 429 Too Many Requests",
+    "429 Too Many Requests",
+    "Error: rate limit exceeded for model gpt-4o",
+])
+def test_sanitize_error_rate_limit_returns_friendly_message(raw):
+    from app import _sanitize_error
+    assert _sanitize_error(raw) == "Service temporarily busy, please try again."
+
+
+@pytest.mark.asyncio
+async def test_handle_research_no_api_key_yields_validation_message(monkeypatch):
+    import app as app_mod
+    pipeline_mock = AsyncMock()
+    monkeypatch.setattr(app_mod, "run_pipeline", pipeline_mock)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    results = await _collect(app_mod.handle_research("AI query", "", "", ""))
+    assert len(results) == 1
+    assert "API key" in results[0][0]
+    pipeline_mock.assert_not_awaited()

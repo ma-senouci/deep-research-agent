@@ -9,6 +9,8 @@ load_dotenv(override=True)
 
 
 def _sanitize_error(msg: str) -> str:
+    if any(k in msg.lower() for k in ("rate limit", "ratelimit", "429")):
+        return "Service temporarily busy, please try again."
     msg = re.sub(r"^\w+(\.\w+)*Error:\s*", "", msg)
     msg = re.sub(r'File ".+?", line \d+.*', "", msg)
     msg = re.sub(r"Traceback.*", "", msg, flags=re.DOTALL)
@@ -24,6 +26,10 @@ async def handle_research(query, email, openai_key, resend_key):
         os.environ["OPENAI_API_KEY"] = openai_key.strip()
     if resend_key and resend_key.strip():
         os.environ["RESEND_API_KEY"] = resend_key.strip()
+
+    if not os.getenv("OPENAI_API_KEY"):
+        yield "❌ OpenAI API key is required. Please provide it in the API Keys section or set OPENAI_API_KEY in .env.", "", ""
+        return
 
     queue, statuses = asyncio.Queue(), []
     task = asyncio.create_task(run_pipeline(
