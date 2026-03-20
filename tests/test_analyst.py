@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock
 from agents import Runner
+import logic_agents.analyst as analyst_mod
 from logic_agents import run_analyst
 from models.schemas import ResearchReport, SearchSummary
 
@@ -59,3 +60,18 @@ async def test_run_analyst_rejects_empty_summaries():
     result = await run_analyst([])
     assert result.success is False
     assert "No search summaries" in result.error
+
+
+@pytest.mark.asyncio
+async def test_run_analyst_uses_configured_model(monkeypatch):
+    mock_result = AsyncMock()
+    mock_result.final_output = RESEARCH_REPORT
+    runner_mock = AsyncMock(return_value=mock_result)
+    monkeypatch.setattr(Runner, "run", runner_mock)
+    monkeypatch.setenv("ANALYST_MODEL", "gpt-4.1-mini")
+
+    result = await run_analyst(SEARCH_SUMMARIES)
+
+    assert result.success is True
+    agent = runner_mock.await_args.args[0]
+    assert agent.model == "gpt-4.1-mini"
