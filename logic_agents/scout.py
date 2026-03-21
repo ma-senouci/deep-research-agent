@@ -7,8 +7,9 @@ scout_agent = Agent(
     name="Scout Agent",
     instructions="""\
 You are a web research scout. For the given search query, perform a focused web search
-and return a concise summary of the most relevant findings. Write the summary in 2-3 paragraphs,
-less than 300 words. Capture the main points, be succinct, ignore fluff, and avoid commentary.
+and return a concise summary of the most relevant findings.
+Write the summary itself in 2-3 paragraphs and keep it under 300 words.
+Capture the main points, be succinct, ignore fluff, and avoid commentary.
 Include only specific URLs or citations in the sources list.
 If no sources are found, return an empty sources list.""",
     model="gpt-4o-mini-search-preview",

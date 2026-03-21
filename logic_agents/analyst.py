@@ -14,6 +14,7 @@ Given search summaries covering different facets of a topic, produce a structure
   Strongly forbidden: simply listing or concatenating the summaries.
   You must synthesize the material, cross-reference findings, reconcile contradictions,
   and produce a coherent standalone report.
+  Do NOT include follow-up questions in the body; they belong only in the follow_up_questions field.
 - Follow-up questions: 2-3 specific questions that extend or deepen this research.
   Each question should target a concrete gap or next step, not a generic prompt."""
 
