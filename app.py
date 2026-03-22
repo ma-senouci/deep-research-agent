@@ -28,7 +28,7 @@ async def handle_research(query, email, openai_key, resend_key):
         os.environ["RESEND_API_KEY"] = resend_key.strip()
 
     if not os.getenv("OPENAI_API_KEY"):
-        yield "❌ OpenAI API key is required. Please provide it in the API Keys section or set OPENAI_API_KEY in .env.", "", ""
+        yield "🔑 OpenAI API key is required. Please provide it in the API Keys section or set OPENAI_API_KEY in .env.", "", ""
         return
 
     queue, statuses = asyncio.Queue(), []
@@ -71,17 +71,25 @@ async def handle_research(query, email, openai_key, resend_key):
 
 with gr.Blocks(title="DeepResearch") as ui:
     gr.Markdown("# 🔬 DeepResearch\nAI-powered multi-agent research assistant")
-    query = gr.Textbox(label="Research Query", placeholder="What would you like to research?", lines=3)
-    email = gr.Textbox(label="Recipient Email (optional)", placeholder="you@example.com")
+    query = gr.Textbox(
+        label="🔍 Research Query",
+        placeholder="What would you like to research?",
+        lines=3,
+    )
+    email = gr.Textbox(
+        label="📧 Recipient Email (optional)",
+        placeholder="you@example.com",
+    )
 
-    with gr.Accordion("API Keys (optional — overrides .env)", open=False):
-        openai_key = gr.Textbox(label="OpenAI API Key", type="password")
-        resend_key = gr.Textbox(label="Resend API Key", type="password")
+    with gr.Accordion("🔑 API Keys", open=False):
+        gr.Markdown("Keys entered here override `.env`.")
+        openai_key = gr.Textbox(label="OpenAI API Key (required unless set in .env)", type="password")
+        resend_key = gr.Textbox(label="Resend API Key (optional, email only)", type="password")
 
     btn = gr.Button("🚀 Research", variant="primary")
-    status = gr.Textbox(label="Status", interactive=False)
-    report_out = gr.Markdown(label="Report")
-    trace_out = gr.Markdown(label="Trace")
+    status = gr.Textbox(label="📡 Status", interactive=False)
+    report_out = gr.Markdown(label="📄 Report")
+    trace_out = gr.Markdown(label="🔗 Trace")
 
     btn.click(
         fn=handle_research,

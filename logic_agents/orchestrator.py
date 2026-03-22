@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from agents import Agent, trace
+from agents import trace
 from models.schemas import AgentResult, ResearchReport
 from logic_agents.strategist import run_strategist
 from logic_agents.scout import run_scouts
@@ -7,13 +7,6 @@ from logic_agents.analyst import run_analyst
 from logic_agents.delivery import run_delivery
 
 TRACE_BASE = "https://platform.openai.com/traces/"
-
-orchestrator_agent = Agent(
-    name="Orchestrator Agent",
-    instructions="Coordinate the full research pipeline: plan → search → analyze → deliver.",
-    model="gpt-4o-mini",
-    output_type=ResearchReport,
-)
 
 
 async def run_pipeline(
@@ -35,7 +28,8 @@ async def run_pipeline(
             strategist_result = await run_strategist(query, answers)
             if not strategist_result.success:
                 return AgentResult(
-                    success=False, error=f"Strategist failed: {strategist_result.error}",
+                    success=False,
+                    error=f"Strategist failed: {strategist_result.error}",
                     trace_url=trace_url,
                 )
 
@@ -44,21 +38,25 @@ async def run_pipeline(
             scout_results = await run_scouts(queries, status_callback=status_callback)
             summaries = [r.data for r in scout_results if r.success and r.data]
             if not summaries:
-                _update("❌ All searches failed")
+                _update("All searches failed")
                 return AgentResult(
                     success=False,
-                    error="No search results available — please try rephrasing your query.",
+                    error="No search results available - please try rephrasing your query.",
                     trace_url=trace_url,
                 )
+
             failed = len(scout_results) - len(summaries)
             if failed:
-                _update(f"⚠️ {failed}/{len(scout_results)} searches failed, continuing with {len(summaries)} results")
+                _update(
+                    f"{failed}/{len(scout_results)} searches failed, continuing with {len(summaries)} results"
+                )
 
             _update("Synthesizing...")
             analyst_result = await run_analyst(summaries)
             if not analyst_result.success:
                 return AgentResult(
-                    success=False, error=f"Analyst failed: {analyst_result.error}",
+                    success=False,
+                    error=f"Analyst failed: {analyst_result.error}",
                     trace_url=trace_url,
                 )
 
@@ -67,7 +65,7 @@ async def run_pipeline(
                 _update("Sending...")
                 delivery_result = await run_delivery(report, recipient_email)
                 if not delivery_result.success:
-                    _update(f"⚠️ Email delivery failed: {delivery_result.error}")
+                    _update(f"Email delivery failed: {delivery_result.error}")
 
             return AgentResult(success=True, data=report, trace_url=trace_url)
     except Exception as e:

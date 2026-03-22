@@ -1,5 +1,5 @@
-python-dotenv==1.2.1
-gradio==6.3.0
+python-dotenv==1.2.2
+gradio==6.9.0
 pydantic==2.12.5
-openai-agents==0.6.5
-resend==2.21.0
+openai-agents==0.12.5
+resend==2.26.0

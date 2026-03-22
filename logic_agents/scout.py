@@ -12,7 +12,7 @@ Write the summary itself in 2-3 paragraphs and keep it under 300 words.
 Capture the main points, be succinct, ignore fluff, and avoid commentary.
 Include only specific URLs or citations in the sources list.
 If no sources are found, return an empty sources list.""",
-    model="gpt-4o-mini-search-preview",
+    model="gpt-4o-mini",
     tools=[WebSearchTool(search_context_size="low")],
     model_settings=ModelSettings(tool_choice="required"),
     output_type=SearchSummary,

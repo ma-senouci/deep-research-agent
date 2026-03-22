@@ -23,6 +23,8 @@ class ClarificationResult(BaseModel):
 
 
 class SearchTerm(BaseModel):
+    # Keep reasoning before query so the model commits to the search angle
+    # before generating the final query, which improves consistency.
     reasoning: str = Field(..., description="Rationale for choosing this specific query")
     query: str = Field(..., description="Optimized search query string")
 
