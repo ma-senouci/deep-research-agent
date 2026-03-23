@@ -12,7 +12,9 @@ sdk_version: 6.9.0
 
 DeepResearch is a portfolio project that demonstrates a practical multi-agent research workflow built with the OpenAI Agents SDK. A user enters a research question in a Gradio UI, the system plans searches, runs web research in parallel, synthesizes the results into a structured report, and can optionally send that report by email.
 
-Live demo: [Hugging Face Spaces](https://huggingface.co/spaces/m-senouci/deep-research-agent) (deployment pending)
+🚀 Live Demo:
+
+[![Live Demo](https://img.shields.io/badge/🤗_Live_Demo-Try_It-green?style=for-the-badge)](https://huggingface.co/spaces/m-senouci/deep-research-agent)
 
 Note: The live demo does not include my API keys.
 To use the app, provide your own `OPENAI_API_KEY` and, if you want email delivery, an optional `RESEND_API_KEY` through the UI.
