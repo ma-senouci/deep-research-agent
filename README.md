@@ -9,8 +9,17 @@ sdk_version: 6.9.0
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![OpenAI Agents SDK](https://img.shields.io/badge/OpenAI%20Agents%20SDK-latest-green.svg)](https://github.com/openai/openai-agents-python)
 [![Gradio](https://img.shields.io/badge/Gradio-UI-orange.svg)](https://gradio.app/)
+[![Tests](https://github.com/ma-senouci/deep-research-agent/actions/workflows/test.yml/badge.svg)](https://github.com/ma-senouci/deep-research-agent/actions/workflows/test.yml)
 
 DeepResearch is a portfolio project that demonstrates a practical multi-agent research workflow built with the OpenAI Agents SDK. A user enters a research question in a Gradio UI, the system plans searches, runs web research in parallel, synthesizes the results into a structured report, and can optionally send that report by email.
+
+## 🎬 Demo
+
+<a href="https://github.com/ma-senouci/deep-research-agent/releases/tag/v1.0.0">
+  <img src="assets/deepresearch-demo-thumbnail.png" alt="DeepResearch Demo" width="700">
+</a>
+
+[Download the full demo video](https://github.com/ma-senouci/deep-research-agent/releases/download/v1.0.0/deepresearch-demo.mp4)
 
 🚀 Live Demo:
 
@@ -72,6 +81,11 @@ Model choice note: by default, all agents use `gpt-4o-mini`. The Scout agent pai
 
 ```text
 deep-research-agent/
+|-- .github/
+|   `-- workflows/
+|       `-- test.yml
+|-- assets/
+|   `-- deepresearch-demo-thumbnail.png
 |-- logic_agents/
 |   |-- __init__.py
 |   |-- analyst.py
